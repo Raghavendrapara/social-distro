@@ -1,0 +1,8 @@
+server:
+  port: 8080
+
+datahub:
+  indexing:
+    core-pool-size: 4
+    max-pool-size: 16
+    queue-capacity: 100
