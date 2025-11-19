@@ -1,19 +1,14 @@
 package com.raghav.datahub.service.indexing;
 
-import com.raghav.datahub.domain.model.DataItem;
-import com.raghav.datahub.domain.model.IndexingJob;
-import com.raghav.datahub.domain.model.JobStatus;
-import com.raghav.datahub.domain.model.Pod;
-import com.raghav.datahub.domain.model.PodIndex;
-import com.raghav.datahub.domain.repository.IndexingJobRepository;
-import com.raghav.datahub.domain.repository.PodIndexRepository;
-import com.raghav.datahub.domain.repository.PodRepository;
+import com.raghav.datahub.domain.model.*;
+import com.raghav.datahub.domain.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.concurrent.ExecutorService;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -22,25 +17,29 @@ public class IndexingService {
 
     private final PodRepository podRepository;
     private final PodIndexRepository podIndexRepository;
-    private final IndexingJobRepository indexingJobRepository;
-    private final ExecutorService indexingExecutor;
+    private final IndexingJobRepository jobRepository;
+    private final ExecutorService executor;
+
     private final long simulatedDelayMs;
+    private final int chunkSize;
 
     public IndexingService(PodRepository podRepository,
                            PodIndexRepository podIndexRepository,
-                           IndexingJobRepository indexingJobRepository,
+                           IndexingJobRepository jobRepository,
                            ExecutorService indexingExecutorService,
-                           @Value("${datahub.indexing.simulated-delay-ms:1000}") long simulatedDelayMs) {
+                           @Value("${datahub.indexing.simulated-delay-ms:1000}") long simulatedDelayMs,
+                           @Value("${datahub.indexing.chunk-size:20}") int chunkSize) {
         this.podRepository = podRepository;
         this.podIndexRepository = podIndexRepository;
-        this.indexingJobRepository = indexingJobRepository;
-        this.indexingExecutor = indexingExecutorService;
+        this.jobRepository = jobRepository;
+        this.executor = indexingExecutorService;
         this.simulatedDelayMs = simulatedDelayMs;
+        this.chunkSize = chunkSize;
     }
 
-    /**
-     * Start an async indexing job for a pod.
-     */
+    
+    // PUBLIC API
+
     public IndexingJob startIndexing(String podId) {
         Pod pod = podRepository.findById(podId);
         if (pod == null) {
@@ -48,59 +47,93 @@ public class IndexingService {
         }
 
         IndexingJob job = new IndexingJob(podId);
-        indexingJobRepository.save(job);
+        jobRepository.save(job);
 
-        indexingExecutor.submit(() -> runIndexing(job));
+        executor.submit(() -> runIndexing(job));
 
         return job;
     }
 
-    /**
-     * Get job status.
-     */
     public IndexingJob getJob(String jobId) {
-        return indexingJobRepository.findById(jobId);
+        return jobRepository.findById(jobId);
     }
 
-    /**
-     * Actual work: build a PodIndex from Pod content.
-     * Runs on a background thread.
-     */
+    
+    // INTERNAL PARALLEL INDEXING LOGIC
+
     private void runIndexing(IndexingJob job) {
         job.setStatus(JobStatus.RUNNING);
         job.setStartedAt(Instant.now());
-        indexingJobRepository.save(job);
+        jobRepository.save(job);
 
         try {
             Pod pod = podRepository.findById(job.getPodId());
-            if (pod == null) {
-                throw new IllegalStateException("Pod not found during indexing: " + job.getPodId());
-            }
+            List<DataItem> items = new ArrayList<>(pod.getItems());
 
-            String combined = pod.getItems()
-                    .stream()
-                    .map(DataItem::getContent)
-                    .collect(Collectors.joining("\n---\n"));
+            // 1. Chunk the data
+            List<List<DataItem>> chunks = chunk(items, chunkSize);
+            log.info("Indexing pod {} with {} chunks", pod.getId(), chunks.size());
 
-            // Simulate heavy processing time
-            try {
-                Thread.sleep(simulatedDelayMs);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            // 2. Submit each chunk as a parallel future
+            List<CompletableFuture<String>> futures = chunks.stream()
+                    .map(chunk -> CompletableFuture.supplyAsync(() -> processChunk(chunk), executor))
+                    .collect(Collectors.toList());
 
-            PodIndex index = new PodIndex(pod.getId(), combined);
+            // 3. Wait for all futures
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                    futures.toArray(new CompletableFuture[0])
+            );
+
+            // 4. Combine results
+            CompletableFuture<List<String>> combined = allFutures.thenApply(v ->
+                    futures.stream()
+                            .map(CompletableFuture::join)
+                            .collect(Collectors.toList())
+            );
+
+            List<String> processedChunks = combined.join();
+
+            // 5. Merge into final index
+            String finalIndexedText = String.join("\n---\n", processedChunks);
+
+            PodIndex index = new PodIndex(pod.getId(), finalIndexedText);
             podIndexRepository.save(index);
 
             job.setStatus(JobStatus.COMPLETED);
-            log.info("Indexing completed for podId={} jobId={}", job.getPodId(), job.getJobId());
+            job.setFinishedAt(Instant.now());
+            jobRepository.save(job);
+
+            log.info("Indexing completed for pod {}", pod.getId());
+
         } catch (Exception e) {
             job.setStatus(JobStatus.FAILED);
             job.setErrorMessage(e.getMessage());
-            log.error("Indexing failed for jobId={}", job.getJobId(), e);
-        } finally {
             job.setFinishedAt(Instant.now());
-            indexingJobRepository.save(job);
+            jobRepository.save(job);
+
+            log.error("Indexing failed for job {}", job.getJobId(), e);
         }
+    }
+
+    // PROCESSING HELPERS
+
+    private List<List<DataItem>> chunk(List<DataItem> items, int chunkSize) {
+        List<List<DataItem>> chunks = new ArrayList<>();
+        for (int i = 0; i < items.size(); i += chunkSize) {
+            chunks.add(items.subList(i, Math.min(i + chunkSize, items.size())));
+        }
+        return chunks;
+    }
+
+    private String processChunk(List<DataItem> items) {
+        try {
+            Thread.sleep(simulatedDelayMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        return items.stream()
+                .map(DataItem::getContent)
+                .collect(Collectors.joining(" "));
     }
 }
