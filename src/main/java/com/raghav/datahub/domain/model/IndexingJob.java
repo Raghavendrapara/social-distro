@@ -21,10 +21,33 @@ public class IndexingJob {
     private Instant finishedAt;
     private String errorMessage;
 
+
     public IndexingJob(String podId) {
-        this.jobId = UUID.randomUUID().toString();
+        this(
+                UUID.randomUUID().toString(),
+                podId,
+                Instant.now(),
+                JobStatus.PENDING,
+                null,
+                null,
+                null
+        );
+    }
+
+
+    public IndexingJob(String jobId,
+                       String podId,
+                       Instant createdAt,
+                       JobStatus status,
+                       Instant startedAt,
+                       Instant finishedAt,
+                       String errorMessage) {
+        this.jobId = jobId;
         this.podId = podId;
-        this.createdAt = Instant.now();
-        this.status = JobStatus.PENDING;
+        this.createdAt = createdAt;
+        this.status = status;
+        this.startedAt = startedAt;
+        this.finishedAt = finishedAt;
+        this.errorMessage = errorMessage;
     }
 }

@@ -5,12 +5,13 @@ import com.raghav.datahub.domain.model.Pod;
 import com.raghav.datahub.domain.model.PodIndex;
 import com.raghav.datahub.domain.repository.PodIndexRepository;
 import com.raghav.datahub.domain.repository.PodRepository;
-import com.raghav.datahub.infrastructure.llm.LlmClient;
+import com.raghav.datahub.service.llm.LlmClient;
+import com.raghav.datahub.web.dto.QueryRequest;
 import com.raghav.datahub.web.dto.QueryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,40 +21,45 @@ public class QueryService {
     private final PodIndexRepository podIndexRepository;
     private final LlmClient llmClient;
 
-    public QueryResponse queryPod(String podId, String question) {
+    public QueryResponse queryPod(String podId, QueryRequest request) {
         Pod pod = podRepository.findById(podId);
         if (pod == null) {
             throw new IllegalArgumentException("Pod not found: " + podId);
         }
 
-        // Try to use indexed content
-        PodIndex index = podIndexRepository.findByPodId(podId);
-        String context;
+        String context = buildContext(pod);
+        String prompt = buildPrompt(context, request.getQuestion());
 
+        String answer = llmClient.generateAnswer(prompt);
+
+        String[] usedItemIds = pod.getItems().stream()
+                .map(DataItem::getId)
+                .toArray(String[]::new);
+
+        return new QueryResponse(answer, usedItemIds);
+    }
+
+    private String buildContext(Pod pod) {
+        PodIndex index = podIndexRepository.findByPodId(pod.getId());
         if (index != null) {
-            context = index.getCombinedText();
-        } else {
-            context = pod.getItems()
-                    .stream()
-                    .map(DataItem::getContent)
-                    .collect(Collectors.joining("\n---\n"));
+            return index.getCombinedText();
         }
 
-        String prompt = """
+        // fallback: raw items
+        StringBuilder sb = new StringBuilder();
+        for (DataItem item : pod.getItems()) {
+            sb.append(item.getContent()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private String buildPrompt(String context, String question) {
+        return """
                 Context:
                 %s
 
                 Question:
                 %s
                 """.formatted(context, question);
-
-        String answer = llmClient.generateAnswer(prompt);
-
-        String[] usedIds = pod.getItems()
-                .stream()
-                .map(DataItem::getId)
-                .toArray(String[]::new);
-
-        return new QueryResponse(answer, usedIds);
     }
 }

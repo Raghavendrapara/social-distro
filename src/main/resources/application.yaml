@@ -12,3 +12,21 @@ datahub:
     chunk-max-retries: 1
   llm:
     simulated-latency-ms: 300
+    provider: fake
+#    provider: openai
+#    base-url: https://api.openai.com
+#    api-key:
+#    model:
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/social_distro
+    username: social_distro_user
+    password: social_distro_pass
+  jpa:
+    hibernate:
+      ddl-auto: update   # dev only
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true

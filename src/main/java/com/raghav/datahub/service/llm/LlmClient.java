@@ -1,4 +1,4 @@
-package com.raghav.datahub.infrastructure.llm;
+package com.raghav.datahub.service.llm;
 
 /**
  * Abstraction for an LLM client.

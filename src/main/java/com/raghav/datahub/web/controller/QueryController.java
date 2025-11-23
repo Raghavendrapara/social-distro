@@ -17,7 +17,7 @@ public class QueryController {
     public ResponseEntity<QueryResponse> queryPod(
             @PathVariable String podId,
             @Valid @RequestBody QueryRequest request) {
-        QueryResponse response = queryService.queryPod(podId, request.getQuestion());
+        QueryResponse response = queryService.queryPod(podId, request);
         return ResponseEntity.ok(response);
     }
 }

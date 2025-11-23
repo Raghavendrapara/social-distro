@@ -14,8 +14,12 @@ public class PodIndex {
     private final Instant createdAt;
 
     public PodIndex(String podId, String combinedText) {
+        this(podId, combinedText, Instant.now());
+    }
+
+    public PodIndex(String podId, String combinedText, Instant createdAt) {
         this.podId = podId;
         this.combinedText = combinedText;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
     }
 }
