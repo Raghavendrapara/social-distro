@@ -18,8 +18,8 @@ public class PodIndexEntity {
     @Column(name = "pod_id", nullable = false, updatable = false)
     private String podId;
 
-    @Lob
-    @Column(name = "combined_text", nullable = false)
+
+    @Column(name = "combined_text", nullable = false, columnDefinition = "TEXT")
     private String combinedText;
 
     @Column(name = "created_at", nullable = false)

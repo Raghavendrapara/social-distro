@@ -23,8 +23,7 @@ public class DataItemEntity {
     @ToString.Exclude
     private PodEntity pod;
 
-    @Lob
-    @Column(name = "content", nullable = false)
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "created_at", nullable = false)
