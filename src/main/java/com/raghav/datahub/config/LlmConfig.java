@@ -2,6 +2,7 @@ package com.raghav.datahub.config;
 
 import com.raghav.datahub.service.llm.FakeLlmClient;
 import com.raghav.datahub.service.llm.LlmClient;
+import com.raghav.datahub.service.llm.OllamaLlmClient;
 import com.raghav.datahub.service.llm.OpenAiLlmClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,7 +21,8 @@ public class LlmConfig {
     @Bean
     @ConditionalOnProperty(name = "datahub.llm.provider", havingValue = "fake", matchIfMissing = true)
     public LlmClient fakeLlmClient() {
-        return new FakeLlmClient(300); // or use props if you want
+        // you can wire simulated latency via props if you want
+        return new FakeLlmClient(300);
     }
 
     @Bean
@@ -32,5 +34,15 @@ public class LlmConfig {
                 .build();
 
         return new OpenAiLlmClient(webClient, props);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "datahub.llm.provider", havingValue = "ollama")
+    public LlmClient ollamaLlmClient(WebClient.Builder builder) {
+        WebClient webClient = builder
+                .baseUrl(props.getBaseUrl()) // e.g. http://localhost:11434
+                .build();
+
+        return new OllamaLlmClient(webClient, props);
     }
 }
