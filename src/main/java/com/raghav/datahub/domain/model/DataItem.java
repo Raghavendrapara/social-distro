@@ -6,10 +6,7 @@ import lombok.ToString;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Represents a single piece of content in a Pod.
- */
-@Getter          // <-- This generates getContent(), getId(), getCreatedAt()
+@Getter
 @ToString
 public class DataItem {
 
@@ -17,23 +14,13 @@ public class DataItem {
     private final String content;
     private final Instant createdAt;
 
-    private DataItem(String id, String content, Instant createdAt) {
+    public DataItem(String content) {
+        this(UUID.randomUUID().toString(), content, Instant.now());
+    }
+
+    public DataItem(String id, String content, Instant createdAt) {
         this.id = id;
         this.content = content;
         this.createdAt = createdAt;
-    }
-
-    /**
-     * Factory method to create a new DataItem.
-     */
-    public static DataItem create(String content) {
-        if (content == null || content.isBlank()) {
-            throw new IllegalArgumentException("Content cannot be null or blank");
-        }
-        return new DataItem(
-                UUID.randomUUID().toString(),
-                content,
-                Instant.now()
-        );
     }
 }

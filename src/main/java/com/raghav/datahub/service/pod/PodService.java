@@ -13,10 +13,9 @@ public class PodService {
     private final PodRepository podRepository;
 
     public Pod createPod(String name, String ownerUserId) {
-        Pod pod = Pod.create(name, ownerUserId);
+        Pod pod = new Pod(name, ownerUserId);
         return podRepository.save(pod);
     }
-
 
     public Pod getPod(String podId) {
         Pod pod = podRepository.findById(podId);
@@ -28,7 +27,7 @@ public class PodService {
 
     public void addData(String podId, String content) {
         Pod pod = getPod(podId);
-        pod.addItem(DataItem.create(content));
+        pod.addItem(new DataItem(content));
         podRepository.save(pod);
     }
 }

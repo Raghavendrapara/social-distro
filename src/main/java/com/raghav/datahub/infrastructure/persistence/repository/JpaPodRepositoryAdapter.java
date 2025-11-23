@@ -1,15 +1,17 @@
 package com.raghav.datahub.infrastructure.persistence.repository;
 
+import com.raghav.datahub.domain.model.DataItem;
 import com.raghav.datahub.domain.model.Pod;
 import com.raghav.datahub.domain.repository.PodRepository;
+import com.raghav.datahub.infrastructure.persistence.entity.DataItemEntity;
 import com.raghav.datahub.infrastructure.persistence.entity.PodEntity;
-import com.raghav.datahub.infrastructure.persistence.mapper.PodEntityMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Repository
 @Primary
@@ -17,27 +19,18 @@ import java.util.List;
 public class JpaPodRepositoryAdapter implements PodRepository {
 
     private final JpaPodSpringRepository springRepository;
-    private final PodEntityMapper mapper;
 
     @Override
     public Pod save(Pod pod) {
-        PodEntity entity = mapper.toEntity(pod);
-        entity.setItems(mapper.toEntityItems(pod, entity));
+        PodEntity entity = toEntity(pod);
         PodEntity saved = springRepository.save(entity);
-
-        Pod domain = mapper.toDomain(saved);
-        domain.getItems().addAll(mapper.toDomainItems(saved.getItems()));
-        return domain;
+        return toDomain(saved);
     }
 
     @Override
     public Pod findById(String id) {
         return springRepository.findById(id)
-                .map(entity -> {
-                    Pod pod = mapper.toDomain(entity);
-                    pod.getItems().addAll(mapper.toDomainItems(entity.getItems()));
-                    return pod;
-                })
+                .map(this::toDomain)
                 .orElse(null);
     }
 
@@ -45,11 +38,47 @@ public class JpaPodRepositoryAdapter implements PodRepository {
     public Collection<Pod> findAll() {
         List<PodEntity> entities = springRepository.findAll();
         return entities.stream()
-                .map(entity -> {
-                    Pod pod = mapper.toDomain(entity);
-                    pod.getItems().addAll(mapper.toDomainItems(entity.getItems()));
-                    return pod;
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    // ----------------- mapping helpers -----------------
+
+    private PodEntity toEntity(Pod pod) {
+        PodEntity e = new PodEntity();
+        e.setId(pod.getId());
+        e.setName(pod.getName());
+        e.setOwnerUserId(pod.getOwnerUserId());
+
+        List<DataItemEntity> itemEntities = pod.getItems().stream()
+                .map(item -> {
+                    DataItemEntity di = new DataItemEntity();
+                    di.setId(item.getId());
+                    di.setContent(item.getContent());
+                    di.setCreatedAt(item.getCreatedAt());
+                    di.setPod(e); // back-reference
+                    return di;
                 })
-                .toList();
+                .collect(Collectors.toList());
+
+        e.setItems(itemEntities);
+        return e;
+    }
+
+    private Pod toDomain(PodEntity entity) {
+        List<DataItem> items = entity.getItems().stream()
+                .map(di -> new DataItem(
+                        di.getId(),
+                        di.getContent(),
+                        di.getCreatedAt()
+                ))
+                .collect(Collectors.toList());
+
+        return new Pod(
+                entity.getId(),
+                entity.getName(),
+                entity.getOwnerUserId(),
+                items
+        );
     }
 }
