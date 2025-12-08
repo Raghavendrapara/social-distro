@@ -1,46 +1,56 @@
 services:
-  # 1. Database Service
+  # --- 1. Database Service ---
   postgres:
     image: postgres:15-alpine
     container_name: social-distro-db
-    environment:
-      POSTGRES_DB: social_distro
-      POSTGRES_USER: social_distro_user
-      POSTGRES_PASSWORD: social_distro_pass
     ports:
       - "5432:5432"
+    environment:
+      # Inject secrets from .env file
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - datahub-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U social_distro_user -d social_distro"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
-      timeout: 5s
       retries: 5
 
-  # 2. LLM Service (Ollama)
+  # --- 2. LLM Engine (Ollama) ---
   ollama:
     image: ollama/ollama:latest
     container_name: social-distro-llm
     ports:
       - "11434:11434"
     volumes:
-      - ollama_models:/root/.ollama
+      # BIND MOUNT
+      # MAC/LINUX: Use ${HOME}/.ollama
+      # WINDOWS: Use C:/Users/YourName/.ollama
+      - ${HOME}/.ollama:/root/.ollama
     networks:
       - datahub-network
 
+  # --- 3. The Backend Application ---
   app:
     build: .
     container_name: social-distro-backend
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/social_distro
-      SPRING_DATASOURCE_USERNAME: social_distro_user
-      SPRING_DATASOURCE_PASSWORD: social_distro_pass
-      DATAHUB_LLM_BASE_URL: http://ollama:11434
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+
       DATAHUB_LLM_PROVIDER: ollama
+      DATAHUB_LLM_BASE_URL: http://ollama:11434
+
+
+      DATAHUB_INDEXING_SIMULATED_DELAY_MS: ${INDEXING_SIMULATED_DELAY_MS}
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,7 +61,6 @@ services:
 
 volumes:
   postgres_data:
-  ollama_models:
 
 networks:
   datahub-network:
