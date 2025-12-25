@@ -3,14 +3,13 @@ package com.raghav.datahub.service.llm;
 import com.raghav.datahub.config.LlmProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.RestClient;
 
 @Slf4j
 @RequiredArgsConstructor
 public class OllamaLlmClient implements LlmClient {
 
-    private final WebClient webClient;
+    private final RestClient restClient;
     private final LlmProperties props;
 
     @Override
@@ -20,16 +19,11 @@ public class OllamaLlmClient implements LlmClient {
         request.setPrompt(prompt);
         request.setStream(false);
 
-        OllamaGenerateResponse response = webClient.post()
+        OllamaGenerateResponse response = restClient.post()
                 .uri("/api/generate")
-                .bodyValue(request)
+                .body(request)
                 .retrieve()
-                .bodyToMono(OllamaGenerateResponse.class)
-                .onErrorResume(ex -> {
-                    log.error("Error calling Ollama LLM", ex);
-                    return Mono.just(new OllamaGenerateResponse()); // empty response
-                })
-                .block(); // we'll make this reactive later in Step C
+                .body(OllamaGenerateResponse.class);
 
         if (response == null || response.getResponse() == null) {
             return "LLM did not return a response.";

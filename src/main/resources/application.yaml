@@ -5,20 +5,35 @@ datahub:
   indexing:
     simulated-delay-ms: 1000
     chunk-size: 20
-    chunk-timeout-ms: 2000
-    chunk-max-retries: 1
+    chunk-timeout-ms: 60000
+    chunk-max-retries: 3
   llm:
     simulated-latency-ms: 300
     provider: ollama
     base-url: http://localhost:11434
     model: phi3:mini
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
 spring:
+  threads:
+    virtual:
+      enabled: true
+  sql:
+    init:
+      mode: always
   datasource:
-    url: jdbc:postgresql://localhost:5432/social_distro
-    username: social_distro_user
-    password: social_distro_pass
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
   jpa:
+    defer-datasource-initialization: true
     hibernate:
       ddl-auto: update
     show-sql: true

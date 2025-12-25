@@ -52,7 +52,7 @@ class IndexingStressTest {
 
     @Test
     void stressTestVirtualThreads() {
-        int itemCount = 2000;
+        int itemCount = 20000;
         String podId = "stress-pod";
 
         List<DataItem> items = new ArrayList<>();

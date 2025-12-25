@@ -28,7 +28,7 @@ public class QueryService {
         }
 
         String context = buildContext(pod);
-        String prompt = buildPrompt(context, request.getQuestion());
+        String prompt = buildPrompt(context, request.question());
 
         String answer = llmClient.generateAnswer(prompt);
 
@@ -45,7 +45,6 @@ public class QueryService {
             return index.getCombinedText();
         }
 
-        // fallback: raw items
         StringBuilder sb = new StringBuilder();
         for (DataItem item : pod.getItems()) {
             sb.append(item.getContent()).append("\n");

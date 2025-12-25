@@ -20,10 +20,9 @@ public class PodController {
     private final PodService podService;
     private final PodMapper podMapper;
 
-
     @PostMapping
     public ResponseEntity<CreatePodResponse> createPod(@Valid @RequestBody CreatePodRequest request) {
-        Pod pod = podService.createPod(request.getName(), request.getOwnerUserId());
+        Pod pod = podService.createPod(request.name(), request.ownerUserId());
         return ResponseEntity.ok(new CreatePodResponse(pod.getId()));
     }
 
@@ -31,7 +30,7 @@ public class PodController {
     public ResponseEntity<Void> addData(
             @PathVariable String podId,
             @Valid @RequestBody AddDataRequest request) {
-        podService.addData(podId, request.getContent());
+        podService.addData(podId, request.content());
         return ResponseEntity.ok().build();
     }
 
@@ -40,6 +39,4 @@ public class PodController {
         Pod pod = podService.getPod(podId);
         return ResponseEntity.ok(podMapper.toMetadataResponse(pod));
     }
-
-
 }

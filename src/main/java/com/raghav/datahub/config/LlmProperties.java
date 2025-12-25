@@ -12,7 +12,7 @@ public class LlmProperties {
     /**
      * Provider: "fake", "openai", or "ollama".
      */
-    private String provider = "fake";
+    private String provider = "ollama";
 
     /**
      * Base URL for the LLM provider.

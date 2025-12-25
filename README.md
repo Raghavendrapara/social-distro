@@ -7,14 +7,13 @@ Built with Java 21 and Spring Boot using clean layered architecture, DTO-first d
 ## Features
 - Pod-based data storage
 - Parallel indexing (chunking, retries, timeouts)
-- Mock LLM query API (easily replaceable with OpenAI / Groq / Ollama)
+- Mock LLM query API (easily replaceable with OpenAI / Grok / Ollama)
 - Clean controller/service/domain architecture
 - MapStruct + validation
-- Metrics endpoint: `/metrics/indexing`
+
 
 ## Run
-mvn clean compile
-mvn spring-boot:run
+docker-compose up -d --build
 
 ## API
 POST /pods — create pod
@@ -25,7 +24,6 @@ POST /pods/{id}/index — start indexing
 
 POST /pods/{id}/query — ask questions
 
-GET  /metrics/indexing — view metrics
 
 ## Roadmap
-Add real LLM, embeddings, vector DB, full RAG pipeline, and Docker deployment.
+Host on Cloud, reduce latency

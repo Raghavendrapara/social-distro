@@ -29,7 +29,7 @@ public class JpaPodRepositoryAdapter implements PodRepository {
 
     @Override
     public Pod findById(String id) {
-        return springRepository.findById(id)
+        return springRepository.findByIdWithItems(id)
                 .map(this::toDomain)
                 .orElse(null);
     }

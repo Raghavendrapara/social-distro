@@ -1,35 +1,50 @@
 package com.raghav.datahub.service.indexing;
 
-import lombok.Getter;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
 
 /**
- * Simple in-memory metrics for indexing.
- * Thread-safe and lock-free using Atomic types.
+ * Modern Observability implementation.
+ * Delegates to Micrometer MeterRegistry so metrics appear in Actuator endpoints.
  */
 @Component
-@Getter
 public class IndexingMetrics {
 
-    // Job-level metrics
-    private final LongAdder jobsStarted = new LongAdder();
-    private final LongAdder jobsCompleted = new LongAdder();
-    private final LongAdder jobsFailed = new LongAdder();
+    private final Counter jobsStarted;
+    private final Counter jobsCompleted;
+    private final Counter jobsFailed;
 
-    // Chunk-level metrics
-    private final LongAdder chunksProcessed = new LongAdder();
-    private final LongAdder chunkFailures = new LongAdder();
-    private final LongAdder chunkRetries = new LongAdder();
+    private final Counter chunksProcessed;
+    private final Counter chunkFailures;
+    private final Counter chunkRetries;
 
-    // Current concurrency metrics
-    private final AtomicInteger runningJobs = new AtomicInteger(0);
+    private final AtomicInteger runningJobsGauge = new AtomicInteger(0);
+    private final Timer indexingTimer;
 
-    // Timing metrics (total ms)
-    private final AtomicLong totalIndexingTimeMs = new AtomicLong(0L);
+    public IndexingMetrics(MeterRegistry registry) {
+        this.jobsStarted = registry.counter("datahub.indexing.jobs.started");
+        this.jobsCompleted = registry.counter("datahub.indexing.jobs.completed");
+        this.jobsFailed = registry.counter("datahub.indexing.jobs.failed");
+
+        this.chunksProcessed = registry.counter("datahub.indexing.chunks.processed");
+        this.chunkFailures = registry.counter("datahub.indexing.chunks.failed");
+        this.chunkRetries = registry.counter("datahub.indexing.chunks.retries");
+
+        Gauge.builder("datahub.indexing.jobs.running", runningJobsGauge, AtomicInteger::get)
+                .description("Number of currently running indexing jobs")
+                .register(registry);
+
+        this.indexingTimer = Timer.builder("datahub.indexing.time")
+                .description("Time taken to index a pod")
+                .register(registry);
+    }
+
 
     public void incJobsStarted() {
         jobsStarted.increment();
@@ -56,14 +71,14 @@ public class IndexingMetrics {
     }
 
     public void incRunningJobs() {
-        runningJobs.incrementAndGet();
+        runningJobsGauge.incrementAndGet();
     }
 
     public void decRunningJobs() {
-        runningJobs.decrementAndGet();
+        runningJobsGauge.decrementAndGet();
     }
 
     public void addIndexingTime(long ms) {
-        totalIndexingTimeMs.addAndGet(ms);
+        indexingTimer.record(ms, TimeUnit.MILLISECONDS);
     }
 }

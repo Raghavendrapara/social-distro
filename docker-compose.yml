@@ -1,12 +1,10 @@
 services:
-  # --- 1. Database Service ---
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: social-distro-db
     ports:
       - "5432:5432"
     environment:
-      # Inject secrets from .env file
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -19,43 +17,57 @@ services:
       interval: 5s
       retries: 5
 
-  # --- 2. LLM Engine (Ollama) ---
+  # LLM Engine
   ollama:
     image: ollama/ollama:latest
     container_name: social-distro-llm
     ports:
       - "11434:11434"
+    pull_policy: missing
     volumes:
-      # BIND MOUNT
-      # MAC/LINUX: Use ${HOME}/.ollama
-      # WINDOWS: Use C:/Users/YourName/.ollama
       - ${HOME}/.ollama:/root/.ollama
     networks:
       - datahub-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      retries: 5
 
-  # --- 3. The Backend Application ---
+  ollama-init:
+    image: curlimages/curl:latest
+    container_name: social-distro-model-puller
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - datahub-network
+    pull_policy: missing
+    entrypoint: >
+      /bin/sh -c "
+        echo 'Waiting for Ollama service...';
+        while ! curl -s http://ollama:11434/api/tags > /dev/null; do sleep 2; done;
+        echo 'Ollama is up. Checking for phi3:mini...';
+        # Trigger the pull command via HTTP API (standard Ollama way)
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"phi3:mini\"}';
+        echo 'Model pull request sent. It will download in the background.';
+      "
+
   app:
     build: .
     container_name: social-distro-backend
     ports:
       - "8080:8080"
     environment:
-
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-
-
       DATAHUB_LLM_PROVIDER: ollama
       DATAHUB_LLM_BASE_URL: http://ollama:11434
-
-
-      DATAHUB_INDEXING_SIMULATED_DELAY_MS: ${INDEXING_SIMULATED_DELAY_MS}
     depends_on:
       postgres:
         condition: service_healthy
       ollama:
-        condition: service_started
+        condition: service_healthy
     networks:
       - datahub-network
 
