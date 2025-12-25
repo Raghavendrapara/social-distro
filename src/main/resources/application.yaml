@@ -3,16 +3,12 @@ server:
 
 datahub:
   indexing:
-    core-pool-size: 4
-    max-pool-size: 16
-    queue-capacity: 100
     simulated-delay-ms: 1000
     chunk-size: 20
     chunk-timeout-ms: 2000
     chunk-max-retries: 1
   llm:
     simulated-latency-ms: 300
-#    provider: fake
     provider: ollama
     base-url: http://localhost:11434
     model: phi3:mini
@@ -24,7 +20,7 @@ spring:
     password: social_distro_pass
   jpa:
     hibernate:
-      ddl-auto: update   # dev only
+      ddl-auto: update
     show-sql: true
     open-in-view: false
     properties:

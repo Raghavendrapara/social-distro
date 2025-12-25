@@ -28,7 +28,7 @@ public class IndexingMetrics {
     // Current concurrency metrics
     private final AtomicInteger runningJobs = new AtomicInteger(0);
 
-    // Timing metrics (total ms, you can compute averages)
+    // Timing metrics (total ms)
     private final AtomicLong totalIndexingTimeMs = new AtomicLong(0L);
 
     public void incJobsStarted() {

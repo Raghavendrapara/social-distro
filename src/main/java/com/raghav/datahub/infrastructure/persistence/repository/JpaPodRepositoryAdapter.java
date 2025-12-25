@@ -42,8 +42,6 @@ public class JpaPodRepositoryAdapter implements PodRepository {
                 .collect(Collectors.toList());
     }
 
-    // ----------------- mapping helpers -----------------
-
     private PodEntity toEntity(Pod pod) {
         PodEntity e = new PodEntity();
         e.setId(pod.getId());
