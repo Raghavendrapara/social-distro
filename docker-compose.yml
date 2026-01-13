@@ -13,7 +13,7 @@ services:
     networks:
       - datahub-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}", "kafka-broker-api-versions --bootstrap-server kafka:29092"]
       interval: 5s
       retries: 5
 
@@ -52,6 +52,29 @@ services:
         echo 'Model pull request sent. It will download in the background.';
       "
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.7
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.7
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
   app:
     build: .
     container_name: social-distro-backend
@@ -63,7 +86,10 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       DATAHUB_LLM_PROVIDER: ollama
       DATAHUB_LLM_BASE_URL: http://ollama:11434
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
+      kafka:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       ollama:

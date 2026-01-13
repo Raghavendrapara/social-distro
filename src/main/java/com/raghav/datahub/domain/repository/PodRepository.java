@@ -1,5 +1,6 @@
 package com.raghav.datahub.domain.repository;
 
+import com.raghav.datahub.domain.model.DataItem;
 import com.raghav.datahub.domain.model.Pod;
 
 import java.util.Collection;
@@ -20,4 +21,6 @@ public interface PodRepository {
     Pod findById(String id);
 
     Collection<Pod> findAll();
+
+    void streamItems(String podId, java.util.function.Consumer<DataItem> consumer);
 }

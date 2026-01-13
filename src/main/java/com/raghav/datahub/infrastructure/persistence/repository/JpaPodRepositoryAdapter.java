@@ -8,10 +8,12 @@ import com.raghav.datahub.infrastructure.persistence.entity.PodEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Repository
 @Primary
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 public class JpaPodRepositoryAdapter implements PodRepository {
 
     private final JpaPodSpringRepository springRepository;
+    private final DataItemSpringRepository dataItemSpringRepository;
 
     @Override
     public Pod save(Pod pod) {
@@ -78,5 +81,16 @@ public class JpaPodRepositoryAdapter implements PodRepository {
                 entity.getOwnerUserId(),
                 items
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void streamItems(String podId, java.util.function.Consumer<DataItem> consumer) {
+
+        try (Stream<DataItemEntity> stream = dataItemSpringRepository.streamByPodId(podId)) {
+            stream.forEach(entity -> {
+                consumer.accept(new DataItem(entity.getId(), entity.getContent(), entity.getCreatedAt()));
+            });
+        }
     }
 }
