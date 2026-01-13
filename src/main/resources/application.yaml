@@ -2,6 +2,17 @@ server:
   port: 8080
   
 resilience4j:
+  circuitbreaker:
+    instances:
+      llm:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
   retry:
     instances:
       indexingRetry:
@@ -49,7 +60,7 @@ spring:
   jpa:
     defer-datasource-initialization: false
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     show-sql: false
     open-in-view: false
     properties:
