@@ -1,6 +1,19 @@
 server:
   port: 8080
 
+resilience4j:
+  retry:
+    instances:
+      indexingRetry:
+        max-attempts: 3
+        wait-duration: 2s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.lang.RuntimeException
+          - java.util.concurrent.TimeoutException
+        ignore-exceptions:
+          - java.lang.IllegalArgumentException
 datahub:
   indexing:
     simulated-delay-ms: 1000
