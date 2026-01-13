@@ -1,6 +1,7 @@
 package com.raghav.datahub.service.llm;
 
 import com.raghav.datahub.config.LlmProperties;
+import com.raghav.datahub.web.dto.AddDataRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestClient;
