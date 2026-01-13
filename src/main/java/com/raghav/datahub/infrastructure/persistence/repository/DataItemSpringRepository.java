@@ -6,10 +6,9 @@ import org.springframework.data.jpa.repository.QueryHints;
 import jakarta.persistence.QueryHint;
 import java.util.stream.Stream;
 
-import static org.hibernate.jpa.QueryHints.HINT_FETCH_SIZE;
 
 public interface DataItemSpringRepository extends JpaRepository<DataItemEntity, String> {
 
-    @QueryHints(value = @QueryHint(name = HINT_FETCH_SIZE, value = "500"))
+    @QueryHints(value = @QueryHint(name ="jakarta.persistence.query.fetchSize" , value = "500"))
     Stream<DataItemEntity> streamByPodId(String podId);
 }

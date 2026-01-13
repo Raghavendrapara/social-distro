@@ -13,7 +13,7 @@ services:
     networks:
       - datahub-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}", "kafka-broker-api-versions --bootstrap-server kafka:29092"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       retries: 5
 
@@ -23,7 +23,6 @@ services:
     container_name: social-distro-llm
     ports:
       - "11434:11434"
-    pull_policy: missing
     volumes:
       - ${HOME}/.ollama:/root/.ollama
     networks:
@@ -41,15 +40,15 @@ services:
         condition: service_healthy
     networks:
       - datahub-network
-    pull_policy: missing
     entrypoint: >
       /bin/sh -c "
-        echo 'Waiting for Ollama service...';
-        while ! curl -s http://ollama:11434/api/tags > /dev/null; do sleep 2; done;
-        echo 'Ollama is up. Checking for phi3:mini...';
-        # Trigger the pull command via HTTP API (standard Ollama way)
-        curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"phi3:mini\"}';
-        echo 'Model pull request sent. It will download in the background.';
+        echo 'Checking if model exists...';
+        if ! curl -s http://ollama:11434/api/tags | grep -q 'phi3:mini'; then
+          echo 'Model not found. Pulling phi3:mini...';
+          curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"phi3:mini\"}';
+        else
+          echo 'Model phi3:mini already exists.';
+        fi
       "
 
   zookeeper:
@@ -58,6 +57,8 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - datahub-network
     ports:
       - "2181:2181"
 
@@ -68,6 +69,8 @@ services:
       - zookeeper
     ports:
       - "9092:9092"
+    networks:
+      - datahub-network
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -75,31 +78,35 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD", "cub", "kafka-ready", "1", "20", "-b", "kafka:29092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
   app:
     build: .
     container_name: social-distro-backend
     ports:
       - "8080:8080"
+    networks:
+      - datahub-network
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      DATAHUB_LLM_PROVIDER: ollama
-      DATAHUB_LLM_BASE_URL: http://ollama:11434
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION: "false"
     depends_on:
-      kafka:
-        condition: service_healthy
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       ollama:
         condition: service_healthy
-    networks:
-      - datahub-network
 
 volumes:
   postgres_data:
 
 networks:
   datahub-network:
-    driver: bridge

@@ -1,5 +1,6 @@
 package com.raghav.datahub.domain.model;
 
+import com.raghav.datahub.domain.annotation.Default; // Import this
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -34,7 +35,7 @@ public class IndexingJob {
         );
     }
 
-
+    @Default // <--- ADD THIS
     public IndexingJob(String jobId,
                        String podId,
                        Instant createdAt,

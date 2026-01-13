@@ -1,5 +1,6 @@
 package com.raghav.datahub.domain.model;
 
+import com.raghav.datahub.domain.annotation.Default; // Import this
 import lombok.Getter;
 import lombok.ToString;
 
@@ -16,9 +17,6 @@ public class Pod {
     private String ownerUserId;
     private final List<DataItem> items;
 
-    /**
-     * Constructor used when creating a brand new pod in the application.
-     */
     public Pod(String name, String ownerUserId) {
         this(UUID.randomUUID().toString(), name, ownerUserId, new ArrayList<>());
     }
@@ -26,6 +24,7 @@ public class Pod {
     /**
      * Full constructor used when loading from persistence.
      */
+    @Default // <--- ADD THIS
     public Pod(String id, String name, String ownerUserId, List<DataItem> items) {
         this.id = id;
         this.name = name;

@@ -1,5 +1,6 @@
 package com.raghav.datahub.domain.model;
 
+import com.raghav.datahub.domain.annotation.Default; // Import this
 import lombok.Getter;
 import lombok.ToString;
 
@@ -18,6 +19,7 @@ public class DataItem {
         this(UUID.randomUUID().toString(), content, Instant.now());
     }
 
+    @Default // <--- ADD THIS
     public DataItem(String id, String content, Instant createdAt) {
         this.id = id;
         this.content = content;
