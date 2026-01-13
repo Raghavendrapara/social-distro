@@ -1,14 +1,12 @@
 package com.raghav.datahub.domain.model;
 
-import com.raghav.datahub.domain.annotation.Default; // Import this
-import lombok.Getter;
 import lombok.ToString;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-@Getter
 @ToString
 public class Pod {
 
@@ -23,8 +21,8 @@ public class Pod {
 
     /**
      * Full constructor used when loading from persistence.
+     * MapStruct will use this constructor automatically (most parameters).
      */
-    @Default // <--- ADD THIS
     public Pod(String id, String name, String ownerUserId, List<DataItem> items) {
         this.id = id;
         this.name = name;
@@ -32,7 +30,29 @@ public class Pod {
         this.items = (items != null) ? new ArrayList<>(items) : new ArrayList<>();
     }
 
-    public void addItem(DataItem item) {
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getOwnerUserId() {
+        return ownerUserId;
+    }
+
+    /**
+     * Returns an unmodifiable view of items to prevent external modification.
+     */
+    public List<DataItem> getItems() {
+        return Collections.unmodifiableList(items);
+    }
+
+    /**
+     * Thread-safe method to add an item.
+     */
+    public synchronized void addItem(DataItem item) {
         this.items.add(item);
     }
 }

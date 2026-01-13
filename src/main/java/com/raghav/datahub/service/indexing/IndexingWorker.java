@@ -1,29 +1,26 @@
 package com.raghav.datahub.service.indexing;
 
-import com.raghav.datahub.domain.model.DataItem;
+import com.raghav.datahub.config.LlmProperties;
+import com.raghav.datahub.domain.event.ItemIndexingEvent;
 import com.raghav.datahub.domain.model.IndexingJob;
 import com.raghav.datahub.domain.model.JobStatus;
 import com.raghav.datahub.domain.model.PodIndex;
 import com.raghav.datahub.domain.repository.IndexingJobRepository;
 import com.raghav.datahub.domain.repository.PodIndexRepository;
 import com.raghav.datahub.domain.repository.PodRepository;
-import com.raghav.datahub.service.embedding.EmbeddingClient;
 import com.raghav.datahub.service.indexing.event.PodIndexingEvent;
-import com.raghav.datahub.infrastructure.persistence.entity.VectorChunkEntity;
-import com.raghav.datahub.infrastructure.persistence.repository.JpaVectorChunkRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.retry.annotation.Retry;
-
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
@@ -33,18 +30,12 @@ public class IndexingWorker {
 
     private final PodRepository podRepository;
     private final IndexingJobRepository jobRepository;
-    private final EmbeddingClient embeddingClient;
-    private final JpaVectorChunkRepository vectorChunkRepository;
     private final PodIndexRepository podIndexRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
+    private final LlmProperties llmProperties;
 
-
-    @KafkaListener(
-            topics = "pod-indexing-jobs",
-            groupId = "social-distro-workers-v3",
-            concurrency = "3",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = "pod-indexing-jobs", groupId = "social-distro-workers-v3", concurrency = "3", containerFactory = "kafkaListenerContainerFactory")
     public void onIndexingEvent(String rawJson, Acknowledgment ack) {
         log.info("Received Raw Kafka Message: {}", rawJson);
         PodIndexingEvent event;
@@ -68,6 +59,7 @@ public class IndexingWorker {
     }
 
     @Retry(name = "indexingRetry", fallbackMethod = "recover")
+    @Transactional
     public void processWithRetry(PodIndexingEvent event) {
         IndexingJob job = jobRepository.findById(event.jobId());
         if (job == null) {
@@ -80,43 +72,40 @@ public class IndexingWorker {
         jobRepository.save(job);
 
         AtomicInteger count = new AtomicInteger();
-
         StringBuilder combinedText = new StringBuilder();
 
+        // Fan-out: Iterate items and send events
         podRepository.streamItems(event.podId(), item -> {
-            processItem(event.podId(), item);
+            // Send to Kafka for async processing
+            ItemIndexingEvent itemEvent = new ItemIndexingEvent(
+                    event.podId(),
+                    item.getId(),
+                    item.getContent(),
+                    llmProperties.getEmbeddingModel());
+            // Use item.getId() as key for partitioning
+            kafkaTemplate.send("item-indexing-events", item.getId(), itemEvent);
+
             combinedText.append(item.getContent()).append("\n");
             count.incrementAndGet();
         });
 
+        // Save lightweight Pod Index (Aggregated Text)
         podIndexRepository.save(new PodIndex(event.podId(), combinedText.toString()));
 
         job.setStatus(JobStatus.COMPLETED);
         job.setFinishedAt(Instant.now());
         jobRepository.save(job);
 
-        log.info("Job {} completed. Processed {} items.", event.jobId(), count.get());
-    }
-
-    private void processItem(String podId, DataItem item) {
-        List<Double> embeddingList = embeddingClient.generateEmbedding(item.getContent());
-
-        float[] embeddingArray = toFloatArray(embeddingList);
-
-        VectorChunkEntity chunk = new VectorChunkEntity();
-        chunk.setId(UUID.randomUUID().toString());
-        chunk.setPodId(podId);
-        chunk.setContent(item.getContent());
-        chunk.setEmbedding(embeddingArray);
-
-        vectorChunkRepository.save(chunk);
+        log.info("Job {} split into {} item events. PodIndex created.", event.jobId(), count.get());
     }
 
     public void recover(PodIndexingEvent event, Exception e) {
+        log.error("Retry exhausted for job {}", event.jobId(), e);
         throw new RuntimeException("Resilience4j Retry exhausted", e);
     }
 
-    private void handlePermanentFailure(PodIndexingEvent event, Exception e) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handlePermanentFailure(PodIndexingEvent event, Exception e) {
         IndexingJob job = jobRepository.findById(event.jobId());
         if (job != null) {
             job.setStatus(JobStatus.FAILED);
@@ -124,15 +113,5 @@ public class IndexingWorker {
             job.setFinishedAt(Instant.now());
             jobRepository.save(job);
         }
-    }
-
-    private float[] toFloatArray(List<Double> list) {
-        if (list == null) return new float[0];
-        float[] floatArray = new float[list.size()];
-        for (int i = 0; i < list.size(); i++) {
-            Double val = list.get(i);
-            floatArray[i] = (val != null) ? val.floatValue() : 0.0f;
-        }
-        return floatArray;
     }
 }

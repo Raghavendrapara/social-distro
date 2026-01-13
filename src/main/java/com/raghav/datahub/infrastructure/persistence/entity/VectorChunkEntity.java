@@ -29,6 +29,9 @@ public class VectorChunkEntity {
     @Array(length = 768)
     private float[] embedding;
 
+    @Column(name = "model_version", nullable = false)
+    private String modelVersion;
+
     public VectorChunkEntity() {
         this.id = UUID.randomUUID().toString();
     }

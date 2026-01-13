@@ -25,12 +25,11 @@ public class PodEntity {
     @Column(name = "owner_user_id", nullable = false, length = 100)
     private String ownerUserId;
 
-    @OneToMany(
-            mappedBy = "pod",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true,
-            fetch = FetchType.LAZY
-    )
+    @Version
+    @Column(name = "version")
+    private Long version;
+
+    @OneToMany(mappedBy = "pod", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<DataItemEntity> items = new ArrayList<>();
 }

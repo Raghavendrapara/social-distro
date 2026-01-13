@@ -6,11 +6,12 @@ import com.raghav.datahub.infrastructure.persistence.entity.DataItemEntity;
 import com.raghav.datahub.infrastructure.persistence.entity.PodEntity;
 import org.mapstruct.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PodEntityMapper {
-
 
     @Mapping(target = "items", ignore = true)
     PodEntity toEntity(Pod pod);
@@ -29,6 +30,19 @@ public interface PodEntityMapper {
         }
     }
 
+    /**
+     * ObjectFactory to explicitly construct Pod using the full constructor.
+     * This avoids needing @Default annotation in the domain model.
+     */
+    @ObjectFactory
+    default Pod createPod(PodEntity entity) {
+        List<DataItem> items = entity.getItems() != null
+                ? entity.getItems().stream().map(this::toItemDomain).collect(Collectors.toList())
+                : new ArrayList<>();
+        return new Pod(entity.getId(), entity.getName(), entity.getOwnerUserId(), items);
+    }
+
+    // MapStruct will use createPod factory, then apply any remaining mappings
     Pod toDomain(PodEntity entity);
 
     DataItem toItemDomain(DataItemEntity entity);

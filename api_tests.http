@@ -1,0 +1,48 @@
+### Create a Pod
+POST http://localhost:8080/pods
+Content-Type: application/json
+
+{
+  "name": "My AI Knowledge Base",
+  "ownerUserId": "raghav-123"
+}
+
+> {%
+    client.global.set("podId", response.body.id);
+    client.log("Pod ID: " + client.global.get("podId"));
+%}
+
+### Add Data Item 1
+POST http://localhost:8080/pods/{{podId}}/data
+Content-Type: application/json
+
+{
+  "content": "Raghav is a Senior Software Engineer at Google DeepMind working on Agentic AI."
+}
+
+### Add Data Item 2
+POST http://localhost:8080/pods/{{podId}}/data
+Content-Type: application/json
+
+{
+  "content": "The Social Distro project demonstrates scalable hexagonal architecture with Spring Boot 3."
+}
+
+### Trigger Indexing (Fan-out)
+POST http://localhost:8080/indexing/pods/{{podId}}
+
+> {%
+    client.global.set("jobId", response.body.jobId);
+    client.log("Job ID: " + client.global.get("jobId"));
+%}
+
+### Check Job Status
+GET http://localhost:8080/indexing/jobs/{{jobId}}
+
+### Query the Pod (RAG + Vector Search)
+POST http://localhost:8080/pods/{{podId}}/query
+Content-Type: application/json
+
+{
+  "question": "Where does Raghav work?"
+}

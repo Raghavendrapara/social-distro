@@ -29,10 +29,20 @@ public class LlmProperties {
 
     /**
      * Model name, e.g.:
-     *  - gpt-4o-mini (OpenAI)
-     *  - llama3.1 (Ollama)
+     * - gpt-4o-mini (OpenAI)
+     * - llama3.1 (Ollama)
      */
     private String model;
 
     private String embeddingModel;
+
+    /**
+     * Connection timeout in milliseconds.
+     */
+    private int connectTimeoutMs = 5000;
+
+    /**
+     * Read timeout in milliseconds.
+     */
+    private int readTimeoutMs = 300000;
 }

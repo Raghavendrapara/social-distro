@@ -25,7 +25,7 @@ CREATE TABLE vector_chunks (
     id VARCHAR(255) PRIMARY KEY,
     pod_id VARCHAR(255) NOT NULL,
     content TEXT,
-    model_version VARCHAR(50) NOT NULL,
+    model_version VARCHAR(50) NOT NULL DEFAULT 'phi3:mini',
     embedding vector(768) -- 768 for nomic-embed-text (v1.5) / phi3 hidden state
 );
 

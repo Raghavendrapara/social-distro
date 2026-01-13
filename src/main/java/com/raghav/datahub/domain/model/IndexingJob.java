@@ -1,6 +1,5 @@
 package com.raghav.datahub.domain.model;
 
-import com.raghav.datahub.domain.annotation.Default; // Import this
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -22,7 +21,6 @@ public class IndexingJob {
     private Instant finishedAt;
     private String errorMessage;
 
-
     public IndexingJob(String podId) {
         this(
                 UUID.randomUUID().toString(),
@@ -31,18 +29,20 @@ public class IndexingJob {
                 JobStatus.PENDING,
                 null,
                 null,
-                null
-        );
+                null);
     }
 
-    @Default // <--- ADD THIS
+    /**
+     * Full constructor used when loading from persistence.
+     * MapStruct will use this constructor automatically.
+     */
     public IndexingJob(String jobId,
-                       String podId,
-                       Instant createdAt,
-                       JobStatus status,
-                       Instant startedAt,
-                       Instant finishedAt,
-                       String errorMessage) {
+            String podId,
+            Instant createdAt,
+            JobStatus status,
+            Instant startedAt,
+            Instant finishedAt,
+            String errorMessage) {
         this.jobId = jobId;
         this.podId = podId;
         this.createdAt = createdAt;

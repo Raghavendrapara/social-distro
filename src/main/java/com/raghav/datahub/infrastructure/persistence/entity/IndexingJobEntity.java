@@ -37,4 +37,8 @@ public class IndexingJobEntity {
 
     @Column(name = "error_message", length = 2000)
     private String errorMessage;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }

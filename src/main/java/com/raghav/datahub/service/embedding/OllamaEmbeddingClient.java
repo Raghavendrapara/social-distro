@@ -1,8 +1,10 @@
 package com.raghav.datahub.service.embedding;
 
 import com.raghav.datahub.config.LlmProperties;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -11,12 +13,15 @@ import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
+@Component
 public class OllamaEmbeddingClient implements EmbeddingClient {
 
     private final RestClient restClient;
     private final LlmProperties props;
 
     @Override
+    @CircuitBreaker(name = "llm", fallbackMethod = "fallbackEmbedding")
+    @Cacheable(value = "embedding_cache", key = "#text.hashCode()")
     public List<Double> generateEmbedding(String text) {
         var request = new EmbeddingRequest(props.getEmbeddingModel(), text);
 
@@ -41,8 +46,14 @@ public class OllamaEmbeddingClient implements EmbeddingClient {
         }
     }
 
+    public List<Double> fallbackEmbedding(String text, Throwable t) {
+        log.warn("Embedding generation failed. Returning empty list fallback. Error: {}", t.getMessage());
+        return Collections.emptyList();
+    }
 
-    private record EmbeddingRequest(String model, String prompt) {}
+    private record EmbeddingRequest(String model, String prompt) {
+    }
 
-    private record EmbeddingResponse(List<Double> embedding) {}
+    private record EmbeddingResponse(List<Double> embedding) {
+    }
 }

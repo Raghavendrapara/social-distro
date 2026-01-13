@@ -1,5 +1,6 @@
 package com.raghav.datahub.service.pod;
 
+import com.raghav.datahub.domain.exception.PodNotFoundException;
 import com.raghav.datahub.domain.model.DataItem;
 import com.raghav.datahub.domain.model.Pod;
 import com.raghav.datahub.domain.repository.PodRepository;
@@ -20,7 +21,7 @@ public class PodService {
     public Pod getPod(String podId) {
         Pod pod = podRepository.findById(podId);
         if (pod == null) {
-            throw new IllegalArgumentException("Pod not found: " + podId);
+            throw new PodNotFoundException(podId);
         }
         return pod;
     }
