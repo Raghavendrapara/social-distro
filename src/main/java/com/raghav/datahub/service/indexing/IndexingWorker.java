@@ -3,7 +3,9 @@ package com.raghav.datahub.service.indexing;
 import com.raghav.datahub.domain.model.DataItem;
 import com.raghav.datahub.domain.model.IndexingJob;
 import com.raghav.datahub.domain.model.JobStatus;
+import com.raghav.datahub.domain.model.PodIndex;
 import com.raghav.datahub.domain.repository.IndexingJobRepository;
+import com.raghav.datahub.domain.repository.PodIndexRepository;
 import com.raghav.datahub.domain.repository.PodRepository;
 import com.raghav.datahub.service.embedding.EmbeddingClient;
 import com.raghav.datahub.service.indexing.event.PodIndexingEvent;
@@ -33,14 +35,8 @@ public class IndexingWorker {
     private final IndexingJobRepository jobRepository;
     private final EmbeddingClient embeddingClient;
     private final JpaVectorChunkRepository vectorChunkRepository;
+    private final PodIndexRepository podIndexRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @PostConstruct
-    public void init() {
-        log.info("=================================================");
-        log.info("✅ INDEXING WORKER ALIVE (Group: social-distro-workers-v3)");
-        log.info("=================================================");
-    }
 
 
     @KafkaListener(
@@ -85,10 +81,15 @@ public class IndexingWorker {
 
         AtomicInteger count = new AtomicInteger();
 
+        StringBuilder combinedText = new StringBuilder();
+
         podRepository.streamItems(event.podId(), item -> {
             processItem(event.podId(), item);
+            combinedText.append(item.getContent()).append("\n");
             count.incrementAndGet();
         });
+
+        podIndexRepository.save(new PodIndex(event.podId(), combinedText.toString()));
 
         job.setStatus(JobStatus.COMPLETED);
         job.setFinishedAt(Instant.now());

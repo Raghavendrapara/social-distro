@@ -33,4 +33,6 @@ public class LlmProperties {
      *  - llama3.1 (Ollama)
      */
     private String model;
+
+    private String embeddingModel;
 }

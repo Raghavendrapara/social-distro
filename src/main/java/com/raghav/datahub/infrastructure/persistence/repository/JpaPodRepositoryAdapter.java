@@ -46,7 +46,7 @@ public class JpaPodRepositoryAdapter implements PodRepository {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public void streamItems(String podId, java.util.function.Consumer<DataItem> consumer) {
         try (Stream<DataItemEntity> stream = dataItemSpringRepository.streamByPodId(podId)) {
             stream.forEach(entity -> {

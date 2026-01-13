@@ -15,16 +15,12 @@ resilience4j:
         ignore-exceptions:
           - java.lang.IllegalArgumentException
 datahub:
-  indexing:
-    simulated-delay-ms: 1000
-    chunk-size: 20
-    chunk-timeout-ms: 60000
-    chunk-max-retries: 3
   llm:
     simulated-latency-ms: 300
     provider: ollama
     base-url: http://ollama:11434
     model: phi3:mini
+    embedding-model: nomic-embed-text
 
 management:
   endpoints:
@@ -44,7 +40,7 @@ spring:
     init:
       mode: always
   datasource:
-    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB}
+    url: jdbc:postgresql://localhost:5433/${POSTGRES_DB}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
   jpa:

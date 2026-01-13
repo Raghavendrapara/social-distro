@@ -18,7 +18,7 @@ public class OllamaEmbeddingClient implements EmbeddingClient {
 
     @Override
     public List<Double> generateEmbedding(String text) {
-        var request = new EmbeddingRequest(props.getModel(), text);
+        var request = new EmbeddingRequest(props.getEmbeddingModel(), text);
 
         try {
             var response = restClient.post()

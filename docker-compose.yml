@@ -1,15 +1,15 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg15
+    image: pgvector/pgvector:pg18
     container_name: social-distro-db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - datahub-network
     healthcheck:
@@ -42,13 +42,19 @@ services:
       - datahub-network
     entrypoint: >
       /bin/sh -c "
-        echo 'Checking if model exists...';
+        echo 'Checking models...';
+        # Pull Chat Model
         if ! curl -s http://ollama:11434/api/tags | grep -q 'phi3:mini'; then
-          echo 'Model not found. Pulling phi3:mini...';
+          echo 'Pulling phi3:mini...';
           curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"phi3:mini\"}';
-        else
-          echo 'Model phi3:mini already exists.';
         fi
+      
+        # Pull Embedding Model (Lightweight & Fast)
+        if ! curl -s http://ollama:11434/api/tags | grep -q 'nomic-embed-text'; then
+          echo 'Pulling nomic-embed-text...';
+          curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"nomic-embed-text\"}';
+        fi
+        echo 'Models ready.';
       "
 
   zookeeper:
