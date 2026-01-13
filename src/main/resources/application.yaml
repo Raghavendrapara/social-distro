@@ -1,6 +1,6 @@
 server:
   port: 8080
-
+  
 resilience4j:
   retry:
     instances:
@@ -32,13 +32,16 @@ management:
       show-details: always
 spring:
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
   threads:
     virtual:
       enabled: true
   sql:
     init:
-      mode: always
+      mode: never
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
   datasource:
     url: jdbc:postgresql://localhost:5433/${POSTGRES_DB}
     username: ${POSTGRES_USER}
@@ -46,7 +49,7 @@ spring:
   jpa:
     defer-datasource-initialization: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: false
     open-in-view: false
     properties:
