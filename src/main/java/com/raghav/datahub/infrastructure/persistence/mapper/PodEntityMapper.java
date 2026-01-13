@@ -42,7 +42,8 @@ public interface PodEntityMapper {
         return new Pod(entity.getId(), entity.getName(), entity.getOwnerUserId(), items);
     }
 
-    // MapStruct will use createPod factory, then apply any remaining mappings
+    // MapStruct will use createPod factory, items already handled there
+    @Mapping(target = "items", ignore = true)
     Pod toDomain(PodEntity entity);
 
     DataItem toItemDomain(DataItemEntity entity);

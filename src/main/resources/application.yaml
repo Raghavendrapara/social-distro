@@ -34,6 +34,15 @@ datahub:
     embedding-model: nomic-embed-text
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  metrics:
+    tags:
+      application: social-distro
   endpoints:
     web:
       exposure:
@@ -42,6 +51,10 @@ management:
     health:
       show-details: always
 spring:
+  data:
+    redis:
+      cache:
+        time-to-live: 3600000
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
   threads:

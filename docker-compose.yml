@@ -133,6 +133,40 @@ services:
       timeout: 10s
       retries: 5
 
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - datahub-network
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - datahub-network
+
+  zipkin:
+    image: openzipkin/zipkin:3.4
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    environment:
+      - STORAGE_TYPE=mem
+    networks:
+      - datahub-network
+
   app:
     build: .
     container_name: social-distro-backend
@@ -162,6 +196,7 @@ services:
 
 volumes:
   postgres_data:
+  grafana-data:
 
 networks:
   datahub-network:

@@ -19,4 +19,18 @@ public interface JpaIndexingJobSpringRepository extends JpaRepository<IndexingJo
     @Query("UPDATE IndexingJobEntity j SET j.status = :newStatus, j.startedAt = CURRENT_TIMESTAMP WHERE j.jobId = :id AND j.status = :expectedStatus")
     int updateStatusConditionally(@Param("id") String id, @Param("expectedStatus") JobStatus expectedStatus,
             @Param("newStatus") JobStatus newStatus);
+
+    /**
+     * Mark job as completed with finish time.
+     */
+    @Modifying
+    @Query("UPDATE IndexingJobEntity j SET j.status = com.raghav.datahub.domain.model.JobStatus.COMPLETED, j.finishedAt = CURRENT_TIMESTAMP WHERE j.jobId = :id")
+    int markAsCompleted(@Param("id") String id);
+
+    /**
+     * Mark job as failed with error message.
+     */
+    @Modifying
+    @Query("UPDATE IndexingJobEntity j SET j.status = com.raghav.datahub.domain.model.JobStatus.FAILED, j.finishedAt = CURRENT_TIMESTAMP, j.errorMessage = :error WHERE j.jobId = :id")
+    int markAsFailed(@Param("id") String id, @Param("error") String error);
 }

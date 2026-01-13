@@ -61,15 +61,12 @@ public class IndexingWorker {
     @Retry(name = "indexingRetry", fallbackMethod = "recover")
     @Transactional
     public void processWithRetry(PodIndexingEvent event) {
-        IndexingJob job = jobRepository.findById(event.jobId());
-        if (job == null) {
-            log.error("Job not found: {}", event.jobId());
+        // Atomically claim the job - prevents multiple consumers processing same job
+        boolean claimed = jobRepository.updateStatusConditionally(event.jobId(), JobStatus.PENDING, JobStatus.RUNNING);
+        if (!claimed) {
+            log.warn("Job {} already claimed by another worker, skipping.", event.jobId());
             return;
         }
-
-        job.setStatus(JobStatus.RUNNING);
-        job.setStartedAt(Instant.now());
-        jobRepository.save(job);
 
         AtomicInteger count = new AtomicInteger();
         StringBuilder combinedText = new StringBuilder();
@@ -92,9 +89,8 @@ public class IndexingWorker {
         // Save lightweight Pod Index (Aggregated Text)
         podIndexRepository.save(new PodIndex(event.podId(), combinedText.toString()));
 
-        job.setStatus(JobStatus.COMPLETED);
-        job.setFinishedAt(Instant.now());
-        jobRepository.save(job);
+        // Mark job as completed via query (avoids entity versioning issues)
+        jobRepository.markAsCompleted(event.jobId());
 
         log.info("Job {} split into {} item events. PodIndex created.", event.jobId(), count.get());
     }
@@ -106,12 +102,6 @@ public class IndexingWorker {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handlePermanentFailure(PodIndexingEvent event, Exception e) {
-        IndexingJob job = jobRepository.findById(event.jobId());
-        if (job != null) {
-            job.setStatus(JobStatus.FAILED);
-            job.setErrorMessage(e.getMessage());
-            job.setFinishedAt(Instant.now());
-            jobRepository.save(job);
-        }
+        jobRepository.markAsFailed(event.jobId(), e.getMessage());
     }
 }
