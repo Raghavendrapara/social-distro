@@ -45,8 +45,9 @@ public class IndexingWorker {
 
     @KafkaListener(
             topics = "pod-indexing-jobs",
-            groupId = "social-distro-workers-v2",
-            concurrency = "3"
+            groupId = "social-distro-workers-v3",
+            concurrency = "3",
+            containerFactory = "kafkaListenerContainerFactory"
     )
     public void onIndexingEvent(String rawJson, Acknowledgment ack) {
         log.info("Received Raw Kafka Message: {}", rawJson);
