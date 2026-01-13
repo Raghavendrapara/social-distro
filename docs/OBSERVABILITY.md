@@ -16,6 +16,16 @@ How to use the monitoring tools to understand your application's behavior.
 
 ---
 
+## Critical Setup Notes
+
+> [!IMPORTANT]
+> **Grafana Data Source URL**: When adding Prometheus as a data source in Grafana, use `http://prometheus:9090` (Docker DNS name), NOT `http://localhost:9090`.
+
+> [!IMPORTANT]
+> **Application Label**: Metrics are tagged with `application=social-distro`. Select this in dashboard dropdowns.
+
+---
+
 ## 1. Prometheus: Querying Metrics
 
 ### Access

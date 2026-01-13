@@ -10,36 +10,15 @@ The application exposes metrics at:
 http://localhost:8080/actuator/prometheus
 ```
 
-### Setting Up Grafana + Prometheus
+### Observability Stack (Already Configured)
 
-Add these services to `docker-compose.yml`:
+The following services are in `docker-compose.yml`:
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Zipkin**: http://localhost:9411
 
-```yaml
-  prometheus:
-    image: prom/prometheus:v3.1.0
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+### Prometheus Configuration (`monitoring/prometheus.yml`)
 
-  grafana:
-    image: grafana/grafana:11.4.0
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana-data:/var/lib/grafana
-
-volumes:
-  grafana-data:
-```
-
-Create `monitoring/prometheus.yml`:
 ```yaml
 global:
   scrape_interval: 15s
@@ -48,30 +27,26 @@ scrape_configs:
   - job_name: 'social-distro'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['app:8080']
-
-  - job_name: 'kafka'
-    static_configs:
-      - targets: ['kafka:9101']  # JMX Exporter
-
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis-exporter:9121']
+      - targets: ['social-distro-backend:8080']
 ```
 
-### Access Dashboards
-| Service | URL | Default Credentials |
-|---|---|---|
-| Grafana | http://localhost:3000 | admin / admin |
-| Prometheus | http://localhost:9090 | N/A |
+> **Important**: Prometheus must be on the same Docker network (`datahub-network`) as the app to resolve the container name.
 
-### Recommended Grafana Dashboards (Import by ID)
+### Grafana Data Source Setup
+1. Go to **Connections** → **Data sources** → **Add Prometheus**
+2. URL: `http://prometheus:9090` (NOT localhost!)
+3. Click **Save & Test**
+
+### Recommended Dashboards (Import by ID)
 | Dashboard | ID | Purpose |
 |---|---|---|
-| JVM Micrometer | 4701 | JVM metrics, GC, threads |
-| Spring Boot | 12900 | HTTP requests, latency |
-| Kafka Exporter | 7589 | Kafka lag, throughput |
-| Redis | 763 | Redis ops, memory |
+| Spring Boot APM | 12900 | HTTP metrics, JVM, HikariCP |
+| JVM Micrometer | 4701 | Memory, GC, threads |
+
+### Dashboard Variables
+After importing, set these in the dashboard:
+- **application**: `social-distro`
+- **instance**: `social-distro-backend:8080`
 
 ---
 

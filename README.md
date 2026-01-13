@@ -2,6 +2,8 @@
 
 A distributed, scalable backend system for personal data management and AI-powered insights, built with modern Java and hexagonal architecture.
 
+![DataHub Ecosystem Vision](docs/images/datahub_vision.png)
+
 ## Functionality
 - **Pod Management**: Create and manage isolated data pods ("Knowledge Bases") for users.
 - **Data Ingestion**: Add text data to pods.

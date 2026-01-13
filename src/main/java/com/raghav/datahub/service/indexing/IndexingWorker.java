@@ -2,7 +2,6 @@ package com.raghav.datahub.service.indexing;
 
 import com.raghav.datahub.config.LlmProperties;
 import com.raghav.datahub.domain.event.ItemIndexingEvent;
-import com.raghav.datahub.domain.model.IndexingJob;
 import com.raghav.datahub.domain.model.JobStatus;
 import com.raghav.datahub.domain.model.PodIndex;
 import com.raghav.datahub.domain.repository.IndexingJobRepository;
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
