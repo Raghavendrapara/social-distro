@@ -38,7 +38,7 @@ public class IndexingWorker {
     @PostConstruct
     public void init() {
         log.info("=================================================");
-        log.info("✅ INDEXING WORKER ALIVE (Group: social-distro-workers-v2)");
+        log.info("✅ INDEXING WORKER ALIVE (Group: social-distro-workers-v3)");
         log.info("=================================================");
     }
 
