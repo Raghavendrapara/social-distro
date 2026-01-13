@@ -11,11 +11,13 @@ import com.raghav.datahub.infrastructure.persistence.entity.VectorChunkEntity;
 import com.raghav.datahub.infrastructure.persistence.repository.JpaVectorChunkRepository;
 import io.github.resilience4j.retry.annotation.Retry;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.List;
@@ -31,14 +33,33 @@ public class IndexingWorker {
     private final IndexingJobRepository jobRepository;
     private final EmbeddingClient embeddingClient;
     private final JpaVectorChunkRepository vectorChunkRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @PostConstruct
+    public void init() {
+        log.info("=================================================");
+        log.info("✅ INDEXING WORKER ALIVE (Group: social-distro-workers-v2)");
+        log.info("=================================================");
+    }
+
 
     @KafkaListener(
             topics = "pod-indexing-jobs",
-            groupId = "social-distro-workers",
+            groupId = "social-distro-workers-v2",
             concurrency = "3"
     )
-    public void onIndexingEvent(PodIndexingEvent event, Acknowledgment ack) {
-        log.info("Received Indexing Job: {}", event.jobId());
+    public void onIndexingEvent(String rawJson, Acknowledgment ack) {
+        log.info("Received Raw Kafka Message: {}", rawJson);
+        PodIndexingEvent event;
+        try {
+            event = objectMapper.readValue(rawJson, PodIndexingEvent.class);
+        } catch (Exception e) {
+            log.error("Failed to parse Kafka message: {}", rawJson, e);
+            ack.acknowledge();
+            return;
+        }
+
+        log.info("Successfully parsed Job ID: {}", event.jobId());
         try {
             processWithRetry(event);
             ack.acknowledge();
