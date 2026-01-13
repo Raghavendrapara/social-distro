@@ -27,7 +27,7 @@ public class LlmConfig {
     public RestClient.Builder llmRestClientBuilder() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5_000);
-        factory.setReadTimeout(120_000);
+        factory.setReadTimeout(300_000);
 
         return RestClient.builder().requestFactory(factory);
     }

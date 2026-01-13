@@ -26,7 +26,7 @@ public class VectorChunkEntity {
 
     @Column(name = "embedding")
     @JdbcTypeCode(SqlTypes.VECTOR)
-    @Array(length = 3072)
+    @Array(length = 768)
     private float[] embedding;
 
     public VectorChunkEntity() {
