@@ -5,4 +5,4 @@ scrape_configs:
   - job_name: 'social-distro'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['social-distro-backend:8080']
+      - targets: ['app:8080']

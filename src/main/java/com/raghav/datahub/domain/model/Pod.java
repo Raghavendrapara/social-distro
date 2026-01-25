@@ -14,9 +14,10 @@ public class Pod {
     private String name;
     private String ownerUserId;
     private final List<DataItem> items;
+    private Long version; // For optimistic locking
 
     public Pod(String name, String ownerUserId) {
-        this(UUID.randomUUID().toString(), name, ownerUserId, new ArrayList<>());
+        this(UUID.randomUUID().toString(), name, ownerUserId, new ArrayList<>(), null);
     }
 
     /**
@@ -24,10 +25,26 @@ public class Pod {
      * MapStruct will use this constructor automatically (most parameters).
      */
     public Pod(String id, String name, String ownerUserId, List<DataItem> items) {
+        this(id, name, ownerUserId, items, null);
+    }
+
+    /**
+     * Constructor with version for persistence roundtrips.
+     */
+    public Pod(String id, String name, String ownerUserId, List<DataItem> items, Long version) {
         this.id = id;
         this.name = name;
         this.ownerUserId = ownerUserId;
         this.items = (items != null) ? new ArrayList<>(items) : new ArrayList<>();
+        this.version = version;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public String getId() {

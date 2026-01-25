@@ -9,5 +9,7 @@ public interface VectorStore {
 
     List<VectorChunkEntity> findSimilar(float[] embedding, int limit);
 
+    List<VectorChunkEntity> findSimilarByPodId(String podId, float[] embedding, int limit);
+
     List<VectorChunkEntity> findByPodId(String podId);
 }

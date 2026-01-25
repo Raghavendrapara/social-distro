@@ -1,6 +1,7 @@
 package com.raghav.datahub.service.embedding;
 
 import com.raghav.datahub.config.LlmProperties;
+import com.raghav.datahub.domain.exception.EmbeddingUnavailableException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,8 +48,8 @@ public class OllamaEmbeddingClient implements EmbeddingClient {
     }
 
     public List<Double> fallbackEmbedding(String text, Throwable t) {
-        log.warn("Embedding generation failed. Returning empty list fallback. Error: {}", t.getMessage());
-        return Collections.emptyList();
+        log.error("Embedding generation failed after circuit breaker. Error: {}", t.getMessage());
+        throw new EmbeddingUnavailableException("Embedding service unavailable: " + t.getMessage(), t);
     }
 
     private record EmbeddingRequest(String model, String prompt) {

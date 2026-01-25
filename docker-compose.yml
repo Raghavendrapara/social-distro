@@ -70,18 +70,26 @@ services:
     entrypoint: >
       /bin/sh -c "
         echo 'Checking models...';
-        # Pull Chat Model
-        if ! curl -s http://ollama:11434/api/tags | grep -q 'phi3:mini'; then
-          echo 'Pulling phi3:mini...';
-          curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"phi3:mini\"}';
+        
+        # Pull Chat Model (wait for completion with --fail-with-body)
+        if ! curl -sf http://ollama:11434/api/tags | grep -q 'phi3:mini'; then
+          echo 'Pulling phi3:mini (this may take a few minutes)...';
+          curl -sf -X POST http://ollama:11434/api/pull -d '{\"name\": \"phi3:mini\", \"stream\": false}' || exit 1;
+          echo 'phi3:mini pulled successfully.';
+        else
+          echo 'phi3:mini already available.';
         fi
-      
-        # Pull Embedding Model (Lightweight & Fast)
-        if ! curl -s http://ollama:11434/api/tags | grep -q 'nomic-embed-text'; then
+        
+        # Pull Embedding Model (wait for completion)
+        if ! curl -sf http://ollama:11434/api/tags | grep -q 'nomic-embed-text'; then
           echo 'Pulling nomic-embed-text...';
-          curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"nomic-embed-text\"}';
+          curl -sf -X POST http://ollama:11434/api/pull -d '{\"name\": \"nomic-embed-text\", \"stream\": false}' || exit 1;
+          echo 'nomic-embed-text pulled successfully.';
+        else
+          echo 'nomic-embed-text already available.';
         fi
-        echo 'Models ready.';
+        
+        echo 'All models ready.';
       "
 
   zookeeper:
@@ -127,6 +135,8 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 5
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     healthcheck:
       test: ["CMD", "cub", "kafka-ready", "1", "20", "-b", "kafka:29092"]
       interval: 10s
@@ -144,6 +154,11 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     networks:
       - datahub-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
 
   grafana:
     image: grafana/grafana:11.4.0
@@ -156,6 +171,9 @@ services:
       - grafana-data:/var/lib/grafana
     networks:
       - datahub-network
+    depends_on:
+      prometheus:
+        condition: service_healthy
 
   zipkin:
     image: openzipkin/zipkin:3.4
@@ -166,6 +184,11 @@ services:
       - STORAGE_TYPE=mem
     networks:
       - datahub-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9411/health || exit 1"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
 
   app:
     build: .
@@ -189,9 +212,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       kafka:
         condition: service_healthy
       ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+      zipkin:
         condition: service_healthy
 
 volumes:

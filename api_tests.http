@@ -1,48 +1,96 @@
-### Create a Pod
-POST http://localhost:8080/pods
-Content-Type: application/json
+#!/bin/bash
+# =============================================================================
+# Social Distro API Tests - HTTPie Commands
+# =============================================================================
+# Run individual commands or execute the full workflow script at the bottom
+# Base URL: http://localhost:8080
+# =============================================================================
 
-{
-  "name": "My AI Knowledge Base",
-  "ownerUserId": "raghav-123"
-}
+# -----------------------------------------------------------------------------
+# POD MANAGEMENT APIs
+# -----------------------------------------------------------------------------
 
-> {%
-    client.global.set("podId", response.body.id);
-    client.log("Pod ID: " + client.global.get("podId"));
-%}
+# 1. Create a new Pod
+http POST http://localhost:8080/pods \
+    name="My AI Knowledge Base" \
+    ownerUserId="raghav-123"
 
-### Add Data Item 1
-POST http://localhost:8080/pods/{{podId}}/data
-Content-Type: application/json
+# 2. Get Pod details (replace {podId} with actual ID)
+http GET http://localhost:8080/pods/{podId}
 
-{
-  "content": "Raghav is a Senior Software Engineer at Google DeepMind working on Agentic AI."
-}
+# 3. Add data item to Pod (replace {podId} with actual ID)
+http POST http://localhost:8080/pods/{podId}/data \
+    content="Raghav is a Senior Software Engineer at Google DeepMind working on Agentic AI."
 
-### Add Data Item 2
-POST http://localhost:8080/pods/{{podId}}/data
-Content-Type: application/json
+# -----------------------------------------------------------------------------
+# INDEXING APIs
+# -----------------------------------------------------------------------------
 
-{
-  "content": "The Social Distro project demonstrates scalable hexagonal architecture with Spring Boot 3."
-}
+# 4. Start indexing for a Pod (replace {podId} with actual ID)
+http POST http://localhost:8080/indexing/pods/{podId}
 
-### Trigger Indexing (Fan-out)
-POST http://localhost:8080/indexing/pods/{{podId}}
+# 5. Check indexing job status (replace {jobId} with actual ID)
+http GET http://localhost:8080/indexing/jobs/{jobId}
 
-> {%
-    client.global.set("jobId", response.body.jobId);
-    client.log("Job ID: " + client.global.get("jobId"));
-%}
+# -----------------------------------------------------------------------------
+# QUERY APIs (RAG + Vector Search)
+# -----------------------------------------------------------------------------
 
-### Check Job Status
-GET http://localhost:8080/indexing/jobs/{{jobId}}
+# 6. Query a Pod (replace {podId} with actual ID)
+http POST http://localhost:8080/pods/{podId}/query \
+    question="Where does Raghav work?"
 
-### Query the Pod (RAG + Vector Search)
-POST http://localhost:8080/pods/{{podId}}/query
-Content-Type: application/json
+# =============================================================================
+# FULL WORKFLOW SCRIPT
+# =============================================================================
+# Uncomment and run this section to execute the complete workflow
 
-{
-  "question": "Where does Raghav work?"
-}
+# #!/bin/bash
+# set -e
+#
+# echo "=== Creating Pod ==="
+# POD_RESPONSE=$(http --body POST http://localhost:8080/pods \
+#     name="Test Knowledge Base" \
+#     ownerUserId="test-user-001")
+# POD_ID=$(echo $POD_RESPONSE | jq -r '.id')
+# echo "Created Pod ID: $POD_ID"
+#
+# echo ""
+# echo "=== Adding Data Items ==="
+# http --body POST http://localhost:8080/pods/$POD_ID/data \
+#     content="Raghav is a Senior Software Engineer at Google DeepMind working on Agentic AI."
+# echo "Added item 1"
+#
+# http --body POST http://localhost:8080/pods/$POD_ID/data \
+#     content="The Social Distro project demonstrates scalable hexagonal architecture with Spring Boot 3."
+# echo "Added item 2"
+#
+# http --body POST http://localhost:8080/pods/$POD_ID/data \
+#     content="Vector search enables semantic similarity matching for RAG queries."
+# echo "Added item 3"
+#
+# echo ""
+# echo "=== Starting Indexing ==="
+# JOB_RESPONSE=$(http --body POST http://localhost:8080/indexing/pods/$POD_ID)
+# JOB_ID=$(echo $JOB_RESPONSE | jq -r '.jobId')
+# echo "Started Job ID: $JOB_ID"
+#
+# echo ""
+# echo "=== Waiting for Indexing to Complete ==="
+# while true; do
+#     STATUS=$(http --body GET http://localhost:8080/indexing/jobs/$JOB_ID | jq -r '.status')
+#     echo "Job Status: $STATUS"
+#     if [ "$STATUS" = "COMPLETED" ] || [ "$STATUS" = "FAILED" ]; then
+#         break
+#     fi
+#     sleep 2
+# done
+#
+# echo ""
+# echo "=== Querying Pod ==="
+# http --body POST http://localhost:8080/pods/$POD_ID/query \
+#     question="Where does Raghav work?"
+#
+# echo ""
+# echo "=== Getting Pod Details ==="
+# http --body GET http://localhost:8080/pods/$POD_ID

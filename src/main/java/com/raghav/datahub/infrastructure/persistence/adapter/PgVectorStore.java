@@ -25,6 +25,11 @@ public class PgVectorStore implements VectorStore {
     }
 
     @Override
+    public List<VectorChunkEntity> findSimilarByPodId(String podId, float[] embedding, int limit) {
+        return vectorChunkRepository.findSimilarByPodId(podId, embedding, limit);
+    }
+
+    @Override
     public List<VectorChunkEntity> findByPodId(String podId) {
         return vectorChunkRepository.findByPodId(podId);
     }

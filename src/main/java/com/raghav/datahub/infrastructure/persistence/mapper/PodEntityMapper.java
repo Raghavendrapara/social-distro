@@ -39,7 +39,7 @@ public interface PodEntityMapper {
         List<DataItem> items = entity.getItems() != null
                 ? entity.getItems().stream().map(this::toItemDomain).collect(Collectors.toList())
                 : new ArrayList<>();
-        return new Pod(entity.getId(), entity.getName(), entity.getOwnerUserId(), items);
+        return new Pod(entity.getId(), entity.getName(), entity.getOwnerUserId(), items, entity.getVersion());
     }
 
     // MapStruct will use createPod factory, items already handled there
